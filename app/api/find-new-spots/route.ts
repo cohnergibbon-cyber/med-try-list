@@ -37,7 +37,7 @@ Return ONLY a valid JSON array. Each object must have exactly these fields:
 - lat (number)
 - lng (number)
 
-Exclude these restaurants: ${[...existingNames].slice(0, 40).join(', ')}
+Exclude these restaurants: ${Array.from(existingNames).slice(0, 40).join(', ')}
 
 Return ONLY the JSON array, no markdown, no explanation.`
 
