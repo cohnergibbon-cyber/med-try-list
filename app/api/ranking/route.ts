@@ -23,3 +23,11 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
+
+export async function DELETE(req: NextRequest) {
+  const { name } = await req.json()
+  if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
+  const { error } = await supabase.from('restaurant_rankings').delete().eq('name', name)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

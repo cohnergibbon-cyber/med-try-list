@@ -122,7 +122,12 @@ export default function Home() {
       return next
     })
     await fetch('/api/status',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, status: newStatus }) })
-    // If just marked tried, open ranking
+    // If unmarking tried, also clear the ranking
+    if (!newStatus && current === 'tried') {
+      setRankings(prev => { const next = {...prev}; delete next[name]; return next })
+      await fetch('/api/ranking', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) })
+    }
+    // If just marked tried, open ranking modal
     if (newStatus === 'tried') {
       const all = [...RESTAURANTS, ...newSpots]
       const r = all.find(r=>r.name===name)
