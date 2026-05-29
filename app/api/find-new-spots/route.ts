@@ -12,7 +12,6 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
   try {
-    // Get existing new spots from DB
     const { data: existingNewSpots } = await supabase.from('new_spots').select('name')
     const existingNames = new Set([
       ...RESTAURANTS.map(r => r.name.toLowerCase()),
@@ -41,14 +40,16 @@ Exclude these restaurants: ${Array.from(existingNames).slice(0, 40).join(', ')}
 
 Return ONLY the JSON array, no markdown, no explanation.`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-opus-4-5',
+    const createParams = {
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 2000,
-      tools: [{ type: 'web_search_20250305' as any, name: 'web_search' }],
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }],
-    })
+    }
 
-    const text = response.content
+    const response = await (anthropic.messages.create as any)(createParams)
+
+    const text = (response.content || [])
       .filter((b: any) => b.type === 'text')
       .map((b: any) => b.text)
       .join('')
@@ -57,13 +58,14 @@ Return ONLY the JSON array, no markdown, no explanation.`
     const found = match ? JSON.parse(match[0]) : []
     const brandNew = found.filter((r: any) => r?.name && !existingNames.has(r.name.toLowerCase()))
 
-    // Save to Supabase
     for (const spot of brandNew) {
       await supabase.from('new_spots').upsert({ name: spot.name, data: spot }, { onConflict: 'name' })
     }
 
-    // Update last refresh timestamp
-    await supabase.from('app_meta').upsert({ key: 'last_refresh', value: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) })
+    await supabase.from('app_meta').upsert({
+      key: 'last_refresh',
+      value: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    })
 
     return NextResponse.json({ added: brandNew.length, spots: brandNew })
   } catch (err: any) {
